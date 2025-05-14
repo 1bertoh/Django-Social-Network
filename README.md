@@ -39,6 +39,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 ```bash
 git clone https://github.com/1bertoh/Django-Social-Network.git
+cd Django-Social-Network
 ```
 Create and Activate a Virtual EnvironmentIt's highly recommended to use a virtual environment to manage project dependencies.# Create the virtual environment (e.g., named 'venv') at the root
 ```bash
