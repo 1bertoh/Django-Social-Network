@@ -61,7 +61,8 @@ pip install -r requirements.txt
 4. Apply Database MigrationsThis will create the necessary database tables based on your Django models.
 ```bash
 cd codeleap_network
-python manage.py makemigrations api python manage.py migrate
+python manage.py makemigrations api
+python manage.py migrate
 ```
 .5. Create a Superuser (Optional)
 This allows you to access the Django admin interface.
