@@ -1,0 +1,287 @@
+Social Network API Documentation
+
+This documentation details the available API endpoints, HTTP methods, required fields, authentication, and example responses.
+API Base URL: /api/Authentication and User Management
+
+1. Register New User
+Endpoint: /users/register/
+Method: POST
+Description: Creates a new user account.
+Authentication: None (AllowAny).
+Request Body (JSON):{
+    "username": "your_username",         // Required, unique
+    "email": "your_email@example.com",   // Required, unique
+    "password": "your_strong_password",  // Required
+    "password2": "your_strong_password", // Required, must match 'password'
+    "first_name": "Your Name",           // Optional
+    "last_name": "Your Last Name"        // Optional
+}
+Fields for POST:
+username (string, required): Unique username.
+email (string, required): Unique email address.
+password (string, required): Password.
+password2 (string, required): Password confirmation.
+first_name (string, optional): First name.
+last_name (string, optional): Last name.
+Success Response (201 CREATED):{
+    "id": 1,
+    "username": "your_username",
+    "email": "your_email@example.com",
+    "first_name": "Your Name",
+    "last_name": "Your Last Name"
+    // password and password2 are not returned
+}
+Error Response (400 BAD REQUEST):
+If passwords do not match, required fields are missing, username/email already exist, or password does not meet validators.{
+    "username": ["A user with that username already exists."],
+    "password": ["Passwords do not match."]
+}
+
+
+2. Obtain Access Token (Login)
+Endpoint: /token/
+Method: POST
+Description: Authenticates a user and returns JWT access and refresh tokens.
+Authentication: None.
+Request Body (JSON):{
+    "username": "your_username",
+    "password": "your_password"
+}
+Fields for POST:
+username (string, required)
+password (string, required)
+Success Response (200 OK):{
+    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+Error Response (401 UNAUTHORIZED or 400 BAD REQUEST):{
+    "detail": "No active account found with the given credentials"
+}
+
+3. Refresh Access Token
+Endpoint: /token/refresh/
+Method: POST
+Description: Obtains a new access token using a valid refresh token.
+Authentication: None.
+Request Body (JSON):{
+    "refresh": "your_valid_refresh_token"
+}
+Fields for POST:
+refresh (string, required): Valid refresh token.
+Success Response (200 OK):{
+    "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9_new_access_token"
+}
+Error Response (401 UNAUTHORIZED):{
+    "detail": "Token is invalid or expired",
+    "code": "token_not_valid"
+}
+
+Posts
+Base URL for Posts: /posts/
+1. List Posts
+Endpoint: /posts/
+Method: GET
+Description: Returns a paginated list of all posts.
+Authentication: Optional (IsAuthenticatedOrReadOnly - Read allowed for everyone).
+Query Parameters (Filters and Ordering):
+author__username=<username>: Filters posts by author's username.
+likes__username=<username>: Filters posts liked by a specific user.
+search=<term>: Text search in post title, content, and author's username.
+ordering=<field>: Orders results. Available fields: title, -title, created_at, -created_at (descending), total_likes, -total_likes, updated_at, -updated_at.
+Success Response (200 OK):{
+    "count": 100,
+    "next": "http://127.0.0.1:8000/api/posts/?page=2",
+    "previous": null,
+    "results": [
+        {
+            "id": 1,
+            "author": { "id": 1, "username": "user1", "first_name": "Name", "last_name": "Surname" },
+            "title": "Title of the first post",
+            "content": "Content of the first post.",
+            "created_at": "2025-05-13T18:00:00Z",
+            "updated_at": "2025-05-13T18:00:00Z",
+            "total_likes": 10,
+            "likes": [1, 2] // IDs of users who liked
+        },
+        // ... other posts
+    ]
+}
+
+2. Create New Post
+Endpoint: /posts/
+Method: POST
+Description: Creates a new post. The author is automatically set as the authenticated user.Authentication: Required (Bearer Token JWT).
+Request Body (JSON):{
+    "title": "My New Post Title",
+    "content": "This is the content of my new post."
+}
+Fields for POST:
+title (string, required): The title of the post.
+content (string, required): The textual content of the post.
+Success Response (201 CREATED):{
+    "id": 2,
+    "author": { "id": 1, "username": "logged_in_user", "first_name": "", "last_name": "" },
+    "title": "My New Post Title",
+    "content": "This is the content of my new post.",
+    "created_at": "2025-05-13T18:05:00Z",
+    "updated_at": "2025-05-13T18:05:00Z",
+    "total_likes": 0,
+    "likes": []
+}
+
+3. Get Post Details
+Endpoint: /posts/{id}/
+Method: GET
+Description: Returns details of a specific post.A
+uthentication: Optional.
+Success Response (200 OK): (Similar to the structure of an item in the post list, including title)
+
+4. Update a Post (Full)
+Endpoint: /posts/{id}/
+Method: PUT
+Description: Fully updates an existing post. Only the post author can update it.
+Authentication: Required (Bearer Token JWT) and the user must be the post author.
+Request Body (JSON):{
+    "title": "Updated Post Title",
+    "content": "Updated content of the post."
+}
+Fields for PUT:
+title (string, required): New title of the post.
+content (string, required): New content of the post.
+Success Response (200 OK): (Updated post)
+
+5. Update a Post (Partial)
+Endpoint: /posts/{id}/
+Method: PATCHD
+escription: Partially updates an existing post. Only the post author can update it.Authentication: Required (Bearer Token JWT) and the user must be the post author.
+Request Body (JSON):{
+    "title": "Partially Updated Title", // Optional
+    "content": "Partially updated content." // Optional
+}
+Fields for PATCH:
+title (string, optional): New title of the post.
+content (string, optional): New content of the post.
+Success Response (200 OK): (Updated post)
+
+6. Delete a Post
+Endpoint: /posts/{id}/
+Method: DELETE
+Description: Deletes an existing post. Only the post author can delete it.
+Authentication: Required (Bearer Token JWT) and the user must be the post author.
+Success Response (204 NO CONTENT): (Empty response body)
+
+7. Like/Unlike a Post
+Endpoint: /posts/{id}/like-unlike/
+Method: POST
+Description: Adds or removes the authenticated user's like on the specified post.
+Authentication: Required (Bearer Token JWT).
+Request Body: No body required.
+Fields for POST: None.Success Response (200 OK):{
+    "liked": true, // or false if unliked
+    "total_likes": 11,
+    "post": { /* full data of the updated post, including title */ }
+}
+
+8. List Users Who Liked a Post
+Endpoint: /posts/{id}/who-liked/
+Method: GET
+Description: Returns a list of users who liked the specified post.
+Authentication: Optional.
+Success Response (200 OK):[
+    { "id": 1, "username": "user1", "first_name": "Name", "last_name": "Surname" },
+    { "id": 2, "username": "user_who_liked", "first_name": "", "last_name": "" }
+    // ... other users who liked
+]
+
+
+Comments
+Base URL for Comments: /comments/
+
+1. List Comments
+Endpoint: /comments/
+Method: GET
+Description: Returns a paginated list of all comments.
+Authentication: Optional.
+Query Parameters (Filters and Ordering):
+post=<post_id>: Filters comments by post ID.
+author__username=<username>: Filters comments by author's username.
+ordering=<field>: Orders results. 
+Available fields: created_at, -created_at.
+Success Response (200 OK):{
+    "count": 50,
+    "next": "http://127.0.0.1:8000/api/comments/?page=2",
+    "previous": null,
+    "results": [
+        {
+            "id": 1,
+            "post": 1, // ID of the post to which the comment belongs
+            "author": { "id": 2, "username": "commenter", "first_name": "", "last_name": "" },
+            "content": "Content of the first comment.",
+            "created_at": "2025-05-13T18:10:00Z",
+            "updated_at": "2025-05-13T18:10:00Z"
+        },
+        // ... other comments
+    ]
+}
+
+
+2. Create New Comment
+Endpoint: /comments/
+Method: POST
+Description: Creates a new comment for a post. The author is automatically set as the authenticated user.
+Authentication: Required (Bearer Token JWT).
+Request Body (JSON):{
+    "post": 1, // ID of the post being commented on
+    "content": "This is my comment on the post."
+}
+Fields for POST:
+post (integer, required): ID of the post to which the comment refers.
+content (string, required): The textual content of the comment.
+Success Response (201 CREATED):{
+    "id": 2,
+    "post": 1,
+    "author": { "id": 1, "username": "logged_in_user", "first_name": "", "last_name": "" },
+    "content": "This is my comment on the post.",
+    "created_at": "2025-05-13T18:15:00Z",
+    "updated_at": "2025-05-13T18:15:00Z"
+}
+
+3. Get Comment Details
+Endpoint: /comments/{id}/
+Method: GET
+Description: Returns details of a specific comment.
+Authentication: Optional.
+Success Response (200 OK): (Similar to the structure of an item in the comment list)
+
+4. Update a Comment (Full)
+Endpoint: /comments/{id}/
+Method: PUT
+Description: Fully updates an existing comment. Only the comment author can update it.Authentication: Required (Bearer Token JWT) and the user must be the comment author.
+Request Body (JSON):{
+    "post": 1, // ID of the post (usually not changed for a comment)
+    "content": "Updated content of the comment."
+}
+Fields for PUT:
+post (integer, required): ID of the post.
+content (string, required): New content of the comment.
+Success Response (200 OK): (Updated comment)
+
+5. Update a Comment (Partial)
+Endpoint: /comments/{id}/
+Method: PATCH
+Description: Partially updates an existing comment. Only the comment author can update it.Authentication: Required (Bearer Token JWT) and the user must be the comment author.
+Request Body (JSON):{
+    "content": "Partially updated content of the comment."
+}
+Fields for PATCH:
+content (string, optional): New content of the comment.
+Success Response (200 OK): (Updated comment)
+
+6. Delete a Comment
+Endpoint: /comments/{id}/
+Method: DELETE
+Description: Deletes an existing comment. Only the comment author can delete it.
+Authentication: Required (Bearer Token JWT) and the user must be the comment author.
+Success Response (204 NO CONTENT): (Empty response body)
+
+This documentation should help in understanding how to interact with each part of the API. Remember to replace placeholders (like {id} or example tokens) with actual values when making your requests.
